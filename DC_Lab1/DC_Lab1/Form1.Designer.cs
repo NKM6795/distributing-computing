@@ -34,6 +34,10 @@ namespace DC_Lab1
 			this.listBox1 = new System.Windows.Forms.ListBox();
 			this.listBox2 = new System.Windows.Forms.ListBox();
 			this.trackBar1 = new System.Windows.Forms.TrackBar();
+			this.start1_button = new System.Windows.Forms.Button();
+			this.start2_button = new System.Windows.Forms.Button();
+			this.finish1_button = new System.Windows.Forms.Button();
+			this.finish2_button = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
 			this.SuspendLayout();
 			// 
@@ -75,11 +79,55 @@ namespace DC_Lab1
 			this.trackBar1.Size = new System.Drawing.Size(402, 45);
 			this.trackBar1.TabIndex = 3;
 			// 
+			// start1_button
+			// 
+			this.start1_button.Location = new System.Drawing.Point(43, 174);
+			this.start1_button.Name = "start1_button";
+			this.start1_button.Size = new System.Drawing.Size(75, 23);
+			this.start1_button.TabIndex = 4;
+			this.start1_button.Text = "Start 1";
+			this.start1_button.UseVisualStyleBackColor = true;
+			this.start1_button.Click += new System.EventHandler(this.Start1_button_Click);
+			// 
+			// start2_button
+			// 
+			this.start2_button.Location = new System.Drawing.Point(632, 174);
+			this.start2_button.Name = "start2_button";
+			this.start2_button.Size = new System.Drawing.Size(75, 23);
+			this.start2_button.TabIndex = 5;
+			this.start2_button.Text = "Start 2";
+			this.start2_button.UseVisualStyleBackColor = true;
+			this.start2_button.Click += new System.EventHandler(this.Start2_button_Click);
+			// 
+			// finish1_button
+			// 
+			this.finish1_button.Location = new System.Drawing.Point(43, 203);
+			this.finish1_button.Name = "finish1_button";
+			this.finish1_button.Size = new System.Drawing.Size(75, 23);
+			this.finish1_button.TabIndex = 6;
+			this.finish1_button.Text = "Finish 1";
+			this.finish1_button.UseVisualStyleBackColor = true;
+			this.finish1_button.Click += new System.EventHandler(this.Finish1_button_Click);
+			// 
+			// finish2_button
+			// 
+			this.finish2_button.Location = new System.Drawing.Point(632, 203);
+			this.finish2_button.Name = "finish2_button";
+			this.finish2_button.Size = new System.Drawing.Size(75, 23);
+			this.finish2_button.TabIndex = 7;
+			this.finish2_button.Text = "Finish 1";
+			this.finish2_button.UseVisualStyleBackColor = true;
+			this.finish2_button.Click += new System.EventHandler(this.Finish2_button_Click);
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(800, 450);
+			this.Controls.Add(this.finish2_button);
+			this.Controls.Add(this.finish1_button);
+			this.Controls.Add(this.start2_button);
+			this.Controls.Add(this.start1_button);
 			this.Controls.Add(this.listBox2);
 			this.Controls.Add(this.listBox1);
 			this.Controls.Add(this.trackBar1);
@@ -99,6 +147,10 @@ namespace DC_Lab1
 		private System.Windows.Forms.ListBox listBox1;
 		private System.Windows.Forms.ListBox listBox2;
 		private System.Windows.Forms.TrackBar trackBar1;
+		private Button start1_button;
+		private Button start2_button;
+		private Button finish1_button;
+		private Button finish2_button;
 	}
 }
 
