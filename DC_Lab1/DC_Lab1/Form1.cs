@@ -17,8 +17,8 @@ namespace DC_Lab1
 		private delegate void CloseFormCallDelegate();
 		private Thread thread1 = null;
 		private Thread thread2 = null;
-		private volatile bool is_running = true;
-		private static int iteration_count = 10000000;
+		private volatile bool isRunning = true;
+		private static readonly int IterationCount = 10000000;
 
 		public Form1()
 		{
@@ -31,32 +31,30 @@ namespace DC_Lab1
 
 			this.thread1 = new Thread(() =>
 			{
-				while (this.is_running)
+				while (this.isRunning)
 				{
 					UpdateTrackBar(false);
 
 					int i = 0;
-					while (i < iteration_count)
+					while (i < IterationCount && this.isRunning)
 					{
 						++i;
 					}
-					//Thread.Sleep(10);
 				}
 			}
 			);
 
 			this.thread2 = new Thread(() =>
 			{
-				while (this.is_running)
+				while (this.isRunning)
 				{
 					UpdateTrackBar(true);
 
 					int i = 0;
-					while (i < iteration_count)
+					while (i < IterationCount && this.isRunning)
 					{
 						++i;
 					}
-					//Thread.Sleep(10);
 				}
 			}
 			);
@@ -70,9 +68,9 @@ namespace DC_Lab1
 		}
 		private void Form1_Closing(object sender, FormClosingEventArgs e)
 		{
-			if (this.is_running)
+			if (this.isRunning)
 			{
-				this.is_running = false;
+				this.isRunning = false;
 				e.Cancel = true;
 
 				new Thread(() =>
@@ -121,12 +119,12 @@ namespace DC_Lab1
 			}
 		}
 
-		private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+		private void ListBox1_SelectedIndexChanged(object sender, EventArgs e)
 		{
 			this.thread1.Priority = (ThreadPriority) Enum.Parse(typeof(ThreadPriority), this.listBox1.SelectedItem.ToString());
 		}
 
-		private void listBox2_SelectedIndexChanged(object sender, EventArgs e)
+		private void ListBox2_SelectedIndexChanged(object sender, EventArgs e)
 		{
 			this.thread2.Priority = (ThreadPriority) Enum.Parse(typeof(ThreadPriority), this.listBox2.SelectedItem.ToString());
 		}

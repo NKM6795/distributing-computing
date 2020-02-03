@@ -41,16 +41,16 @@ namespace DC_Lab1
 			// 
 			this.listBox1.FormattingEnabled = true;
 			this.listBox1.Items.AddRange(new object[] {
-			"4",
-			"3",
-			"2",
-			"1",
-			"0"});
+            "4",
+            "3",
+            "2",
+            "1",
+            "0"});
 			this.listBox1.Location = new System.Drawing.Point(43, 46);
 			this.listBox1.Name = "listBox1";
-			this.listBox1.Size = new System.Drawing.Size(76, 134);
+			this.listBox1.Size = new System.Drawing.Size(76, 69);
 			this.listBox1.TabIndex = 0;
-			this.listBox1.SelectedIndexChanged += new System.EventHandler(this.listBox1_SelectedIndexChanged);
+			this.listBox1.SelectedIndexChanged += new System.EventHandler(this.ListBox1_SelectedIndexChanged);
 			// 
 			// listBox2
 			// 
@@ -60,12 +60,12 @@ namespace DC_Lab1
             "3",
             "2",
             "1",
-			"0"});
+            "0"});
 			this.listBox2.Location = new System.Drawing.Point(632, 46);
 			this.listBox2.Name = "listBox2";
-			this.listBox2.Size = new System.Drawing.Size(76, 134);
+			this.listBox2.Size = new System.Drawing.Size(76, 69);
 			this.listBox2.TabIndex = 1;
-			this.listBox2.SelectedIndexChanged += new System.EventHandler(this.listBox2_SelectedIndexChanged);
+			this.listBox2.SelectedIndexChanged += new System.EventHandler(this.ListBox2_SelectedIndexChanged);
 			// 
 			// trackBar1
 			// 
