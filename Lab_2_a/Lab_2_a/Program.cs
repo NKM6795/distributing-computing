@@ -18,7 +18,7 @@ namespace Lab_2_a
 
 
 		private Thread runner = null;
-		private bool isRunnerMoving = true;
+		private volatile bool isRunnerMoving = true;
 
 		private bool[] findResult;
 
