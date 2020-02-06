@@ -24,7 +24,7 @@ namespace Lab_5_a
 		{
 			for (int i = 0; i < recruitCount; ++i)
 			{
-				recruits[i] = random.Next(1) == 0;
+				recruits[i] = random.Next(2) == 0;
 			}
 
 			for (int i = 0; i < threadCount; ++i)
