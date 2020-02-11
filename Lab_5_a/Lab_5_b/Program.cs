@@ -36,7 +36,7 @@ namespace Lab_5_b
 					while (isRunning)
 					{
 						int toChange = random.Next(stringSize);
-						if (random.Next(1) == 0)
+						if (random.Next(2) == 0)
 						{
 							lock (toLockIsEnd)
 							{
