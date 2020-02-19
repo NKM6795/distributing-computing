@@ -17,13 +17,13 @@ namespace Lab_6_b
 		private delegate void EnableButtonNextDelegate();
 		private delegate void UpdateButtonDelegate(Button button, Color color);
 
-		private const int boardSize = 32;
+		private const int boardSize = 16;
 		private const int civilizationCount = 4;
 
 		private readonly int buttonXOffset = 20;
 		private readonly int buttonYOffset = 20;
-		private Size cellSize = new Size(width: 20, height: 20);
-		private readonly int buttonInterval = 22;
+		private Size cellSize = new Size(width: 40, height: 40);
+		private readonly int buttonInterval = 42;
 		private readonly int colorButtonXOffset = 800;
 		private readonly int colorButtonYOffset = 380;
 
@@ -38,11 +38,16 @@ namespace Lab_6_b
 
 		private readonly Semaphore semaphoreToNext = new Semaphore(0, civilizationCount);
 		private readonly Semaphore semaphoreToDraw = new Semaphore(0, civilizationCount);
+		private readonly Semaphore semaphoreToUpdate = new Semaphore(civilizationCount, civilizationCount);
 		private readonly Barrier barrier = new Barrier(civilizationCount);
 
 		private readonly Thread[] toNext = new Thread[civilizationCount];
 		private Thread output = null;
+		private Thread runner = null;
 		private volatile bool isRunning = true;
+		private readonly object toLock = new object();
+		private volatile bool isPlay = false;
+		private volatile bool isReadyToNext = true;
 
 
 		public Form1()
@@ -201,6 +206,8 @@ namespace Lab_6_b
 
 						barrier.SignalAndWait();
 
+						semaphoreToUpdate.WaitOne();
+
 						lock (boards)
 						{
 							for (int j = 0; j < boardSize; ++j)
@@ -232,29 +239,55 @@ namespace Lab_6_b
 						return;
 					}
 
-
-					for (int i = 0; i < boardSize - 1; ++i)
+					lock (toLock)
 					{
-						for (int j = 0; j < boardSize - 1; ++j)
+						isReadyToNext = true;
+					}
+
+					lock (buttons)
+					{
+						for (int i = 0; i < boardSize - 1; ++i)
 						{
-							Color color = deadCellColor;
-
-							for (int l = 0; l < civilizationCount; ++l)
+							for (int j = 0; j < boardSize - 1; ++j)
 							{
-								if (boards[l, i, j])
-								{
-									color = liveCellColors[l];
-								}
-							}
+								Color color = deadCellColor;
 
-							UpdateButton(buttons[i, j], color);
+								for (int l = 0; l < civilizationCount; ++l)
+								{
+									if (boards[l, i, j])
+									{
+										color = liveCellColors[l];
+									}
+								}
+
+								UpdateButton(buttons[i, j], color);
+							}
 						}
 					}
 
-					EnableButtonNext();
+					semaphoreToUpdate.Release(civilizationCount);
 				}
 			});
 			output.Start();
+
+			runner = new Thread(() =>
+			{
+				while (isRunning)
+				{
+					lock (toLock)
+					{
+						if (isPlay)
+						{
+							if (isReadyToNext)
+							{
+								isReadyToNext = false;
+								semaphoreToNext.Release(civilizationCount);
+							}
+						}
+					}
+				}
+			});
+			runner.Start();
 		}
 
 		private int GetSumAround(int civilizationIndex, int i, int j)
@@ -373,8 +406,31 @@ namespace Lab_6_b
 
 		private void ButtonNext_Click(object sender, EventArgs e)
 		{
-			semaphoreToNext.Release(civilizationCount);
-			buttonNext.Enabled = false;
+			lock (toLock)
+			{
+				if (isReadyToNext)
+				{
+					isReadyToNext = false;
+					semaphoreToNext.Release(civilizationCount);
+				}
+			}
+		}
+
+		private void ButtonPlay_Click(object sender, EventArgs e)
+		{
+			lock (toLock)
+			{
+				if (isPlay)
+				{
+					isPlay = false;
+					buttonPlay.Text = "Play";
+				}
+				else
+				{
+					isPlay = true;
+					buttonPlay.Text = "Pause";
+				}
+			}
 		}
 	}
 }
