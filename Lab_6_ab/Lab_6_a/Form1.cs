@@ -17,16 +17,16 @@ namespace Lab_6_a
 		private delegate void EnableButtonNextDelegate();
 		private delegate void UpdateButtonDelegate(Button button, bool isLive);
 
-		private const int boardSize = 32;
+		private const int boardSize = 16;
 		private const int quarterBoardCount = 4;
-		private const int quarterBoardSize = 17;
+		private const int quarterBoardSize = 9;
 
 		private Tuple<int, int>[] offsets = new Tuple<int, int>[quarterBoardCount];
 
 		private readonly int buttonXOffset = 20;
 		private readonly int buttonYOffset = 20;
-		private Size cellSize = new Size(width: 20, height: 20);
-		private readonly int buttonInterval = 22;
+		private Size cellSize = new Size(width: 40, height: 40);
+		private readonly int buttonInterval = 42;
 
 		private readonly Color deadCellColor = Color.DarkGray;
 		private readonly Color liveCellColor = Color.Green;
@@ -39,10 +39,16 @@ namespace Lab_6_a
 
 		private Semaphore semaphoreToNext = new Semaphore(0, quarterBoardCount);
 		private Semaphore semaphoreToDraw = new Semaphore(0, quarterBoardCount);
+		private readonly Semaphore semaphoreToUpdate = new Semaphore(quarterBoardCount, quarterBoardCount);
+		private readonly Barrier barrier = new Barrier(quarterBoardCount);
 
 		private Thread[] toNext = new Thread[quarterBoardCount];
 		private Thread output = null;
+		private Thread runner = null;
 		private volatile bool isRunning = true;
+		private readonly object toLock = new object();
+		private volatile bool isPlay = false;
+		private volatile bool isReadyToNext = true;
 
 
 		public Form1()
@@ -160,7 +166,7 @@ namespace Lab_6_a
 							}
 						}
 
-
+						barrier.SignalAndWait();
 
 						bool[,] nextTurn = new bool[quarterBoardSize, quarterBoardSize];
 
@@ -206,6 +212,10 @@ namespace Lab_6_a
 							}
 						}
 
+						barrier.SignalAndWait();
+
+						semaphoreToUpdate.WaitOne();
+
 						lock (quarterBoards)
 						{
 							for (int j = 0; j < quarterBoardSize; ++j)
@@ -227,10 +237,11 @@ namespace Lab_6_a
 			{
 				while (isRunning)
 				{
-					semaphoreToDraw.WaitOne();
-					semaphoreToDraw.WaitOne();
-					semaphoreToDraw.WaitOne();
-					semaphoreToDraw.WaitOne();
+					for (int i = 0; i < quarterBoardCount; ++i)
+					{
+						semaphoreToDraw.WaitOne();
+					}
+
 					if (!isRunning)
 					{
 						return;
@@ -257,6 +268,10 @@ namespace Lab_6_a
 						horizontalCenter[i + quarterBoardSize - 2, 1] = quarterBoards[3, i, 1];
 					}
 
+					lock (toLock)
+					{
+						isReadyToNext = true;
+					}
 
 					for (int i = 0; i < quarterBoardSize - 1; ++i)
 					{
@@ -276,10 +291,29 @@ namespace Lab_6_a
 						}
 					}
 
-					EnableButtonNext();
+					semaphoreToUpdate.Release(quarterBoardCount);
 				}
 			});
 			output.Start();
+
+			runner = new Thread(() =>
+			{
+				while (isRunning)
+				{
+					lock (toLock)
+					{
+						if (isPlay)
+						{
+							if (isReadyToNext)
+							{
+								isReadyToNext = false;
+								semaphoreToNext.Release(quarterBoardCount);
+							}
+						}
+					}
+				}
+			});
+			runner.Start();
 		}
 
 		private void UpdateButton(Button button, bool isLive)
@@ -401,8 +435,31 @@ namespace Lab_6_a
 
 		private void ButtonNext_Click(object sender, EventArgs e)
 		{
-			semaphoreToNext.Release(4);
-			buttonNext.Enabled = false;
+			lock (toLock)
+			{
+				if (isReadyToNext)
+				{
+					isReadyToNext = false;
+					semaphoreToNext.Release(quarterBoardCount);
+				}
+			}
+		}
+
+		private void ButtonPlay_Click(object sender, EventArgs e)
+		{
+			lock (toLock)
+			{
+				if (isPlay)
+				{
+					isPlay = false;
+					buttonPlay.Text = "Play";
+				}
+				else
+				{
+					isPlay = true;
+					buttonPlay.Text = "Pause";
+				}
+			}
 		}
 	}
 }
