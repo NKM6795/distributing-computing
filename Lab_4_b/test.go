@@ -23,7 +23,7 @@ var done = make(chan bool, 2)
 
 func gardener() {
 	for {
-		rm_lock.RLock()
+		rm_lock.Lock()
 
 		for i := 0; i < len(garden); i++ {
 			for j := 0; j < len(garden[i]); j++ {
@@ -33,7 +33,7 @@ func gardener() {
 			}
 		}
 
-		rm_lock.RUnlock()
+		rm_lock.Unlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -41,7 +41,7 @@ func gardener() {
 
 func nature() {
 	for {
-		rm_lock.RLock()
+		rm_lock.Lock()
 
 		for i := 0; i < len(garden); i++ {
 			for j := 0; j < len(garden[i]); j++ {
@@ -58,7 +58,7 @@ func nature() {
 			}
 		}
 
-		rm_lock.RUnlock()
+		rm_lock.Unlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -72,7 +72,7 @@ func monitor_1() {
 
 	for i := 0; i < iteration_count; i++ {
 		
-		rm_lock.Lock()
+		rm_lock.RLock()
 
 		for _, row := range garden {
 			for _, cell := range row {
@@ -82,7 +82,7 @@ func monitor_1() {
 		}
 		file_output.WriteString("\n")
 
-		rm_lock.Unlock()
+		rm_lock.RUnlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -94,7 +94,7 @@ func monitor_1() {
 
 func monitor_2() {
 	for i := 0; i < iteration_count; i++ {
-		rm_lock.Lock()
+		rm_lock.RLock()
 
 		for _, row := range garden {
 			for _, cell := range row {
@@ -104,7 +104,7 @@ func monitor_2() {
 		}
 		fmt.Println()
 
-		rm_lock.Unlock()
+		rm_lock.RUnlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
