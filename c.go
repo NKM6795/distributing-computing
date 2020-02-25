@@ -30,7 +30,7 @@ func get_rand_city_pair() (int, int) {
 
 func change_price() {
 	for i := 0; i < iteration_count; i++ {
-		rm_lock.RLock()
+		rm_lock.Lock()
 
 		size := len(graph)
 
@@ -45,7 +45,7 @@ func change_price() {
 			}
 		}
 
-		rm_lock.RUnlock()
+		rm_lock.Unlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -55,7 +55,7 @@ func change_price() {
 
 func add_remove_road() {
 	for i := 0; i < iteration_count; i++ {
-		rm_lock.RLock()
+		rm_lock.Lock()
 
 		size := len(graph)
 
@@ -72,7 +72,7 @@ func add_remove_road() {
 				graph[second][first] = 0
 			}
 		}
-		rm_lock.RUnlock()
+		rm_lock.Unlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -82,7 +82,7 @@ func add_remove_road() {
 
 func add_remove_city() {
 	for i := 0; i < iteration_count; i++ {
-		rm_lock.RLock()
+		rm_lock.Lock()
 
 		size := len(graph)
 
@@ -100,7 +100,7 @@ func add_remove_city() {
 			}
 		}
 
-		rm_lock.RUnlock()
+		rm_lock.Unlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -130,7 +130,7 @@ func get_road_price(end int, current int, visit [][]bool) int {
 
 func get_road() {
 	for i := 0; i < iteration_count; i++ {
-		rm_lock.Lock()
+		rm_lock.RLock()
 
 		size := len(graph)
 
@@ -152,7 +152,7 @@ func get_road() {
 		}
 		
 
-		rm_lock.Unlock()
+		rm_lock.RUnlock()
 
 		time.Sleep(10 * time.Millisecond)
 	}
