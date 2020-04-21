@@ -313,7 +313,66 @@ double foxs_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
 
 void cannon_method(float const * a, float const * b, float * c, size_t size, size_t my_rank, size_t world_size)
 {
+    assert(world_size == 4);
 
+    MPI_Status status;
+
+    size_t const dimension = 2;
+    size_t const current_size = size / dimension;
+
+    size_t const current_row = my_rank / dimension;
+    size_t const current_col = my_rank % dimension;
+
+    size_t const current_row_begin = current_row * current_size;
+    size_t const current_row_end = current_row_begin + current_size;
+    size_t const current_col_begin = current_col * current_size;
+    size_t const current_col_end = current_col_begin + current_size;
+
+    float * matrix = generate_matrix(current_size, TRUE);
+
+    size_t iterations = dimension;
+    size_t a_row = current_row;
+    size_t a_col = (current_col + current_row) % dimension;
+    size_t b_row = (current_col + current_row) % dimension;
+    size_t b_col = current_col;
+
+    for (size_t l = 0; l < iterations; ++l)
+    {
+        multiply_sub_matrix(a, b, matrix, size, current_size, a_row, a_col, b_row, b_col);
+
+        a_col = (a_col + 1) % dimension;
+        b_row = (b_row + 1) % dimension;
+    }
+
+    int const tag = 1;
+
+    if (my_rank == 0)
+    {
+        set_to_result(matrix, c, size, current_size, 0, 0);
+
+        for (int i = 1; i < (int)world_size; ++i)
+        {
+            int row;
+            int col;
+
+            MPI_Recv(&row, 1, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
+            MPI_Recv(&col, 1, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
+            MPI_Recv(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, i, tag, MPI_COMM_WORLD, &status);
+
+            set_to_result(matrix, c, size, current_size, row, col);
+        }
+    }
+
+    if (my_rank != 0)
+    {
+        int row = (int)current_row;
+        int col = (int)current_col;
+        MPI_Send(&row, 1, MPI_INT, 0, tag, MPI_COMM_WORLD);
+        MPI_Send(&col, 1, MPI_INT, 0, tag, MPI_COMM_WORLD);
+        MPI_Send(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
+    }
+
+    destroy_matrix(matrix, size);
 }
 
 double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
@@ -325,8 +384,8 @@ double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_siz
 int main()
 {
     size_t size = 4;
-    char const * name = FOXS_METHOD_ALGO_NAME;
-    size_t id = FOXS_METHOD_ALGO_ID;
+    char const * name = CANNON_METHOD_ALGO_NAME;
+    size_t id = CANNON_METHOD_ALGO_ID;
 
     int my_rank;
     int world_size;
