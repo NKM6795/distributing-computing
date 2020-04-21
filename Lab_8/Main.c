@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
 #include <windows.h>
 
 
@@ -192,22 +193,140 @@ double tape_circuit_multiply_time(size_t size, size_t my_rank, size_t world_size
     return calculate_multiply_time(size, my_rank, world_size, tape_circuit);
 }
 
+void multiply_sub_matrix(
+    float const * a,
+    float const * b,
+    float * result,
+    size_t size,
+    size_t current_size,
+    size_t a_row,
+    size_t a_col,
+    size_t b_row,
+    size_t b_col
+)
+{
+    for (size_t i = 0; i < current_size; ++i)
+    {
+        for (size_t j = 0; j < current_size; ++j)
+        {
+            float temp = 0.f;
+            for (size_t k = 0; k < current_size; ++k)
+            {
+                temp += a[(i + a_row * current_size) * size + (k + a_col * current_size)] * b[(k + b_row * current_size) * size + (j + b_col * current_size)];
+            }
+            result[i * current_size + j] += temp;
+        }
+    }
+}
+
+void set_to_result(
+    float const * matrix,
+    float * c,
+    size_t size,
+    size_t current_size,
+    size_t row,
+    size_t col
+)
+{
+    for (size_t i = 0; i < current_size; ++i)
+    {
+        for (size_t j = 0; j < current_size; ++j)
+        {
+            c[(i + row * current_size) * size + (j + col * current_size)] = matrix[i * current_size + j];
+        }
+    }
+}
+
+
+void foxs_method(float const * a, float const * b, float * c, size_t size, size_t my_rank, size_t world_size)
+{
+    assert(world_size == 4);
+
+    MPI_Status status;
+
+    size_t const dimension = 2;
+    size_t const current_size = size / dimension;
+
+    size_t const current_row = my_rank / dimension;
+    size_t const current_col = my_rank % dimension;
+
+    size_t const current_row_begin = current_row * current_size;
+    size_t const current_row_end = current_row_begin + current_size;
+    size_t const current_col_begin = current_col * current_size;
+    size_t const current_col_end = current_col_begin + current_size;
+
+    float * matrix = generate_matrix(current_size, TRUE);
+
+    size_t iterations = dimension;
+    size_t a_row = current_row;
+    size_t a_col = current_col;
+    size_t b_row = current_row;
+    size_t b_col = current_col;
+
+    for (size_t l = 0; l < iterations; ++l)
+    {
+        a_row = current_row;
+        a_col = current_col;
+
+        a_col = (a_row + l) % iterations;
+
+        multiply_sub_matrix(a, b, matrix, size, current_size, a_row, a_col, b_row, b_col);
+
+        b_row = (b_row + 1) % dimension;
+    }
+
+    int const tag = 1;
+
+    if (my_rank == 0)
+    {
+        set_to_result(matrix, c, size, current_size, 0, 0);
+
+        for (int i = 1; i < (int)world_size; ++i)
+        {
+            int row;
+            int col;
+
+            MPI_Recv(&row, 1, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
+            MPI_Recv(&col, 1, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
+            MPI_Recv(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, i, tag, MPI_COMM_WORLD, &status);
+
+            set_to_result(matrix, c, size, current_size, row, col);
+        }
+    }
+
+    if (my_rank != 0)
+    {
+        int row = (int)current_row;
+        int col = (int)current_col;
+        MPI_Send(&row, 1, MPI_INT, 0, tag, MPI_COMM_WORLD);
+        MPI_Send(&col, 1, MPI_INT, 0, tag, MPI_COMM_WORLD);
+        MPI_Send(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
+    }
+
+    destroy_matrix(matrix, size);
+}
+
 double foxs_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
 {
-    return HUGE_VAL;
+    return calculate_multiply_time(size, my_rank, world_size, foxs_method);
+}
+
+void cannon_method(float const * a, float const * b, float * c, size_t size, size_t my_rank, size_t world_size)
+{
+
 }
 
 double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
 {
-    return HUGE_VAL;
+    return calculate_multiply_time(size, my_rank, world_size, cannon_method);
 }
 
 
 int main()
 {
     size_t size = 4;
-    char const * name = TAPE_CIRCUIT_ALGO_NAME;
-    size_t id = TAPE_CIRCUIT_ALGO_ID;
+    char const * name = FOXS_METHOD_ALGO_NAME;
+    size_t id = FOXS_METHOD_ALGO_ID;
 
     int my_rank;
     int world_size;
