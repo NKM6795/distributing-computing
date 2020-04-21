@@ -85,6 +85,65 @@ double consistent_multiply_time(size_t size, size_t my_rank, size_t world_size)
     return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
 }
 
+double calculate_multiply_time(
+    size_t size,
+    size_t my_rank,
+    size_t world_size,
+    void (*multiplier)(float const *, float const *, float *, size_t, size_t, size_t)
+)
+{
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER t1;
+    LARGE_INTEGER t2;
+
+    QueryPerformanceFrequency(&frequency);
+
+    float * a = generate_matrix(size, FALSE);
+    float * b = generate_matrix(size, FALSE);
+    float * c = generate_matrix(size, TRUE);
+    float * correct = generate_matrix(size, TRUE);
+
+    consistent(a, b, correct, size);
+
+    QueryPerformanceCounter(&t1);
+
+    multiplier(a, b, c, size, my_rank, world_size);
+
+    QueryPerformanceCounter(&t2);
+
+    if (my_rank == 0)
+    {
+        printf("******\n");
+        for (size_t i = 0; i < size; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                printf("%f ", correct[i * size + j]);
+            }
+            printf("\n");
+        }
+
+        printf("******\n");
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                printf("%f ", c[i * size + j]);
+            }
+            printf("\n");
+        }
+        printf("******\n");
+    }
+
+    destroy_matrix(a, size);
+    destroy_matrix(b, size);
+    destroy_matrix(c, size);
+    destroy_matrix(correct, size);
+
+    return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
+}
+
 
 void tape_circuit(float const * a, float const * b, float * c, size_t size, size_t my_rank, size_t world_size)
 {
@@ -130,56 +189,7 @@ void tape_circuit(float const * a, float const * b, float * c, size_t size, size
 
 double tape_circuit_multiply_time(size_t size, size_t my_rank, size_t world_size)
 {
-    LARGE_INTEGER frequency;
-    LARGE_INTEGER t1;
-    LARGE_INTEGER t2;
-
-    QueryPerformanceFrequency(&frequency);
-
-    float * a = generate_matrix(size, FALSE);
-    float * b = generate_matrix(size, FALSE);
-    float * c = generate_matrix(size, TRUE);
-    float * correct = generate_matrix(size, TRUE);
-
-    consistent(a, b, correct, size);
-
-    QueryPerformanceCounter(&t1);
-
-    tape_circuit(a, b, c, size, my_rank, world_size);
-
-    QueryPerformanceCounter(&t2);
-
-    if (my_rank == 0)
-    {
-        printf("******\n");
-        for (size_t i = 0; i < size; ++i)
-        {
-            for (size_t j = 0; j < size; ++j)
-            {
-                printf("%f ", correct[i * size + j]);
-            }
-            printf("\n");
-        }
-
-        printf("******\n");
-
-        for (size_t i = 0; i < size; ++i)
-        {
-            for (size_t j = 0; j < size; ++j)
-            {
-                printf("%f ", c[i * size + j]);
-            }
-            printf("\n");
-        }
-        printf("******\n");
-    }
-
-    destroy_matrix(a, size);
-    destroy_matrix(b, size);
-    destroy_matrix(c, size);
-    destroy_matrix(correct, size);
-
-    return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
+    return calculate_multiply_time(size, my_rank, world_size, tape_circuit);
 }
 
 double foxs_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
