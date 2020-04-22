@@ -102,9 +102,6 @@ double calculate_multiply_time(
     float * a = generate_matrix(size, FALSE);
     float * b = generate_matrix(size, FALSE);
     float * c = generate_matrix(size, TRUE);
-    float * correct = generate_matrix(size, TRUE);
-
-    consistent(a, b, correct, size);
 
     QueryPerformanceCounter(&t1);
 
@@ -112,35 +109,9 @@ double calculate_multiply_time(
 
     QueryPerformanceCounter(&t2);
 
-    if (my_rank == 0)
-    {
-        printf("******\n");
-        for (size_t i = 0; i < size; ++i)
-        {
-            for (size_t j = 0; j < size; ++j)
-            {
-                printf("%f ", correct[i * size + j]);
-            }
-            printf("\n");
-        }
-
-        printf("******\n");
-
-        for (size_t i = 0; i < size; ++i)
-        {
-            for (size_t j = 0; j < size; ++j)
-            {
-                printf("%f ", c[i * size + j]);
-            }
-            printf("\n");
-        }
-        printf("******\n");
-    }
-
     destroy_matrix(a, size);
     destroy_matrix(b, size);
     destroy_matrix(c, size);
-    destroy_matrix(correct, size);
 
     return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
 }
@@ -383,9 +354,26 @@ double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_siz
 
 int main()
 {
-    size_t size = 4;
-    char const * name = CANNON_METHOD_ALGO_NAME;
-    size_t id = CANNON_METHOD_ALGO_ID;
+    size_t size = 1000;
+    size_t id = TAPE_CIRCUIT_ALGO_ID;
+
+    char const * name = "Undefined";
+    if (id == CONSISTENT_ALGO_ID)
+    {
+        name = CONSISTENT_ALGO_NAME;
+    }
+    if (id == TAPE_CIRCUIT_ALGO_ID)
+    {
+        name = TAPE_CIRCUIT_ALGO_NAME;
+    }
+    if (id == FOXS_METHOD_ALGO_ID)
+    {
+        name = FOXS_METHOD_ALGO_NAME;
+    }
+    if (id == CANNON_METHOD_ALGO_ID)
+    {
+        name = CANNON_METHOD_ALGO_NAME;
+    }
 
     int my_rank;
     int world_size;
@@ -394,8 +382,6 @@ int main()
 
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-    printf("%d, %d\n", world_size, my_rank);
 
     double delta = HUGE_VAL;
 
@@ -418,7 +404,7 @@ int main()
 
     if (my_rank == 0)
     {
-        printf("Algo %s, time %f s\n", name, delta);
+        printf("Algo %s, dimention %zd time %f s\n", name, size, delta);
     }
 
     MPI_Finalize();
