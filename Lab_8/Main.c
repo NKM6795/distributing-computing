@@ -71,8 +71,8 @@ double consistent_multiply_time(size_t size, size_t my_rank, size_t world_size)
 
     QueryPerformanceFrequency(&frequency);
 
-    float const * a = generate_matrix(size, FALSE);
-    float const * b = generate_matrix(size, FALSE);
+    float * a = generate_matrix(size, FALSE);
+    float * b = generate_matrix(size, FALSE);
     float * c = generate_matrix(size, TRUE);
 
     QueryPerformanceCounter(&t1);
