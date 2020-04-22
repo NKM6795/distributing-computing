@@ -15,6 +15,8 @@
 #define FOXS_METHOD_ALGO_ID 2
 #define CANNON_METHOD_ALGO_ID 3
 
+#define MAIN_PROCESS 0
+
 
 float * generate_matrix(size_t size, BOOL is_zero_fill)
 {
@@ -34,7 +36,7 @@ float * generate_matrix(size_t size, BOOL is_zero_fill)
     return a;
 }
 
-void destroy_matrix(float * a, size_t size)
+void destroy_matrix(float * a)
 {
     free(a);
 }
@@ -79,9 +81,9 @@ double consistent_multiply_time(size_t size, size_t my_rank, size_t world_size)
 
     QueryPerformanceCounter(&t2);
 
-    destroy_matrix(a, size);
-    destroy_matrix(b, size);
-    destroy_matrix(c, size);
+    destroy_matrix(a);
+    destroy_matrix(b);
+    destroy_matrix(c);
 
     return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
 }
@@ -99,9 +101,20 @@ double calculate_multiply_time(
 
     QueryPerformanceFrequency(&frequency);
 
-    float * a = generate_matrix(size, FALSE);
-    float * b = generate_matrix(size, FALSE);
-    float * c = generate_matrix(size, TRUE);
+    float * a = NULL;
+    float * b = NULL;
+    float * c = NULL;
+    float * correct = NULL;
+
+    if (my_rank == MAIN_PROCESS)
+    {
+        a = generate_matrix(size, FALSE);
+        b = generate_matrix(size, FALSE);
+        c = generate_matrix(size, TRUE);
+        correct = generate_matrix(size, TRUE);
+
+        consistent(a, b, correct, size);
+    }
 
     QueryPerformanceCounter(&t1);
 
@@ -109,9 +122,38 @@ double calculate_multiply_time(
 
     QueryPerformanceCounter(&t2);
 
-    destroy_matrix(a, size);
-    destroy_matrix(b, size);
-    destroy_matrix(c, size);
+    if (my_rank == MAIN_PROCESS)
+    {
+        printf("******\n");
+        for (size_t i = 0; i < size; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                printf("%f ", correct[i * size + j]);
+            }
+            printf("\n");
+        }
+
+        printf("******\n");
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                printf("%f ", c[i * size + j]);
+            }
+            printf("\n");
+        }
+        printf("******\n");
+    }
+
+    if (my_rank == MAIN_PROCESS)
+    {
+        destroy_matrix(a);
+        destroy_matrix(b);
+        destroy_matrix(c);
+        destroy_matrix(correct);
+    }
 
     return (double)(t2.QuadPart - t1.QuadPart) / (double)frequency.QuadPart;
 }
@@ -124,38 +166,80 @@ void tape_circuit(float const * a, float const * b, float * c, size_t size, size
     size_t const end = begin + current_size;
 
     MPI_Status status;
-
-    for (size_t i = begin; i < end; ++i)
-    {
-        for (size_t j = 0; j < size; ++j)
-        {
-            float temp = 0.f;
-            for (size_t k = 0; k < size; ++k)
-            {
-                temp += a[i * size + k] * b[k * size + j];
-            }
-            c[i * size + j] = temp;
-        }
-    }
-
     int const tag = 1;
 
-    if (my_rank == 0)
+    float * a_matrix = NULL;
+    float * b_matrix = NULL;
+    float * c_matrix = NULL;
+
+    if (my_rank == MAIN_PROCESS)
     {
         for (int i = 1; i < (int)world_size; ++i)
         {
-            int offset;
-
-            MPI_Recv(&offset, 1, MPI_INT, i, tag, MPI_COMM_WORLD, &status);
-            MPI_Recv(&c[offset], (int)(current_size * size), MPI_FLOAT, i, tag, MPI_COMM_WORLD, &status);
+            MPI_Send(&b[0], (int)(size * size), MPI_FLOAT, i, tag, MPI_COMM_WORLD);
+            MPI_Send(&a[size * current_size * (size_t)i], (int)(size * current_size), MPI_FLOAT, i, tag, MPI_COMM_WORLD);
         }
     }
 
-    if (my_rank != 0)
+    if (my_rank != MAIN_PROCESS)
     {
-        int const offset = (int)(begin * size);
-        MPI_Send(&offset, 1, MPI_INT, 0, tag, MPI_COMM_WORLD);
-        MPI_Send(&c[offset], (int)(current_size * size), MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
+        a_matrix = (float *)malloc(size * current_size * sizeof(float));
+        b_matrix = (float *)malloc(size * size * sizeof(float));
+        c_matrix = (float *)malloc(size * current_size * sizeof(float));
+
+        MPI_Recv(&b_matrix[0], (int)(size * size), MPI_FLOAT, MAIN_PROCESS, tag, MPI_COMM_WORLD, &status);
+        MPI_Recv(&a_matrix[0], (int)(size * current_size), MPI_FLOAT, MAIN_PROCESS, tag, MPI_COMM_WORLD, &status);
+    }
+
+    if (my_rank == MAIN_PROCESS)
+    {
+        for (size_t i = begin; i < end; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                float temp = 0.f;
+                for (size_t k = 0; k < size; ++k)
+                {
+                    temp += a[i * size + k] * b[k * size + j];
+                }
+                c[i * size + j] = temp;
+            }
+        }
+    }
+    if (my_rank != MAIN_PROCESS)
+    {
+        for (size_t i = 0; i < current_size; ++i)
+        {
+            for (size_t j = 0; j < size; ++j)
+            {
+                float temp = 0.f;
+                for (size_t k = 0; k < size; ++k)
+                {
+                    temp += a_matrix[i * size + k] * b_matrix[k * size + j];
+                }
+                c_matrix[i * size + j] = temp;
+            }
+        }
+    }
+
+    if (my_rank == MAIN_PROCESS)
+    {
+        for (int i = 1; i < (int)world_size; ++i)
+        {
+            MPI_Recv(&c[size * current_size * (size_t)i], (int)(current_size * size), MPI_FLOAT, i, tag, MPI_COMM_WORLD, &status);
+        }
+    }
+
+    if (my_rank != MAIN_PROCESS)
+    {
+        MPI_Send(&c_matrix[0], (int)(current_size * size), MPI_FLOAT, MAIN_PROCESS, tag, MPI_COMM_WORLD);
+    }
+
+    if (my_rank != MAIN_PROCESS)
+    {
+        destroy_matrix(a_matrix);
+        destroy_matrix(b_matrix);
+        destroy_matrix(c_matrix);
     }
 }
 
@@ -274,7 +358,7 @@ void foxs_method(float const * a, float const * b, float * c, size_t size, size_
         MPI_Send(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
     }
 
-    destroy_matrix(matrix, size);
+    destroy_matrix(matrix);
 }
 
 double foxs_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
@@ -343,7 +427,7 @@ void cannon_method(float const * a, float const * b, float * c, size_t size, siz
         MPI_Send(&matrix[0], (int)(current_size * current_size), MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
     }
 
-    destroy_matrix(matrix, size);
+    destroy_matrix(matrix);
 }
 
 double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
@@ -354,7 +438,7 @@ double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_siz
 
 int main()
 {
-    size_t size = 1000;
+    size_t size = 4;
     size_t id = TAPE_CIRCUIT_ALGO_ID;
 
     char const * name = "Undefined";
