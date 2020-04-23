@@ -256,6 +256,7 @@ void foxs_method(float const * a, float const * b, float * c, size_t size, size_
     size_t const current_col_end = current_col_begin + current_size;
 
     float * native_a_matrix = (float *)malloc(current_size * current_size * sizeof(float));
+    float * additional_a_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * a_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * b_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * c_matrix = generate_matrix(current_size, TRUE);
@@ -335,9 +336,19 @@ void foxs_method(float const * a, float const * b, float * c, size_t size, size_
             size_t const b_previous_row = (b_row + dimension - 1) % dimension;
             int const send_to = (int)(b_next_row * dimension + current_col);
             int const recv_from = (int)(b_previous_row * dimension + current_col);
+            int const current_rank = (int)my_rank;
 
-            MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
-            MPI_Recv(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+            if (current_rank < recv_from)
+            {
+                MPI_Recv(&additional_a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                memcpy(&b_matrix[0], &additional_a_matrix[0], current_size * current_size * sizeof(float));
+            }
+            if (current_rank > recv_from)
+            {
+                MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                MPI_Recv(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+            }
         }
     }
 
@@ -366,6 +377,7 @@ void foxs_method(float const * a, float const * b, float * c, size_t size, size_
     destroy_matrix(b_matrix);
     destroy_matrix(c_matrix);
     destroy_matrix(native_a_matrix);
+    destroy_matrix(additional_a_matrix);
 }
 
 double foxs_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
@@ -391,6 +403,7 @@ void cannon_method(float const * a, float const * b, float * c, size_t size, siz
     size_t const current_col_begin = current_col * current_size;
     size_t const current_col_end = current_col_begin + current_size;
 
+    float * additional_a_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * a_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * b_matrix = (float *)malloc(current_size * current_size * sizeof(float));
     float * c_matrix = generate_matrix(current_size, TRUE);
@@ -457,9 +470,19 @@ void cannon_method(float const * a, float const * b, float * c, size_t size, siz
                 size_t const a_previous_col = (a_col + dimension - 1) % dimension;
                 int const send_to = (int)(a_row * dimension + a_next_col);
                 int const recv_from = (int)(a_row * dimension + a_previous_col);
+                int const current_rank = (int)my_rank;
 
-                MPI_Send(&a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
-                MPI_Recv(&a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                if (current_rank < recv_from)
+                {
+                    MPI_Recv(&additional_a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                    MPI_Send(&a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                    memcpy(&a_matrix[0], &additional_a_matrix[0], current_size * current_size * sizeof(float));
+                }
+                if (current_rank > recv_from)
+                {
+                    MPI_Send(&a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                    MPI_Recv(&a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                }
             }
             //B
             {
@@ -467,9 +490,19 @@ void cannon_method(float const * a, float const * b, float * c, size_t size, siz
                 size_t const b_previous_row = (b_row + dimension - 1) % dimension;
                 int const send_to = (int)(b_next_row * dimension + current_col);
                 int const recv_from = (int)(b_previous_row * dimension + current_col);
+                int const current_rank = (int)my_rank;
 
-                MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
-                MPI_Recv(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                if (current_rank < recv_from)
+                {
+                    MPI_Recv(&additional_a_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                    MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                    memcpy(&b_matrix[0], &additional_a_matrix[0], current_size * current_size * sizeof(float));
+                }
+                if (current_rank > recv_from)
+                {
+                    MPI_Send(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, send_to, tag, MPI_COMM_WORLD);
+                    MPI_Recv(&b_matrix[0], (int)(current_size * current_size), MPI_FLOAT, recv_from, tag, MPI_COMM_WORLD, &status);
+                }
             }
         }
     }
@@ -497,6 +530,7 @@ void cannon_method(float const * a, float const * b, float * c, size_t size, siz
     destroy_matrix(a_matrix);
     destroy_matrix(b_matrix);
     destroy_matrix(c_matrix);
+    destroy_matrix(additional_a_matrix);
 }
 
 double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_size)
@@ -508,7 +542,7 @@ double cannon_method_multiply_time(size_t size, size_t my_rank, size_t world_siz
 int main()
 {
     size_t const size = 1000;
-    size_t const id = TAPE_CIRCUIT_ALGO_ID;
+    size_t const id = CANNON_METHOD_ALGO_ID;
 
     char const * name = "Undefined";
     if (id == CONSISTENT_ALGO_ID)
